@@ -1,9 +1,42 @@
 <html>
   <head>
     <title>Golden Examples</title>
+    <script type="text/javascript" src="golden.js"></script>
+
+    <script type="text/javascript">
+function myOnLoad() {
+  var x = document.getElementById("mybutton");
+  var result = document.getElementById("result");
+
+  x.onclick = function () {
+    auChooser({
+      title:'Australia 5km',
+      src:'https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/australia_5km/',
+      hideSubtitle: 1,
+      success: function (items) {
+        var f = "<ul>";
+        for (var i = 0, len = items.length; i < len; i++) {
+          f = f + "<li>";
+          f = f + items[i];
+          console.log(items[i]);
+          f = f + "</li>";
+        }
+        f = f + "</ul>";
+        result.innerHTML = f;
+      },
+      cancel: function () {
+        var result = document.getElementById("result");
+        result.innerHTML = "";
+        // console.log("Cancelled");
+        // alert("Cancelled");
+      }
+    });
+  }
+}
+    </script>
   </head>
   
-  <body>
+  <body onload="myOnLoad()">
     <h1>Golden</h1>
 
     <h2>Chooser</h2>
@@ -13,10 +46,19 @@
       downloads it and parses it for links. Those links are presented
       to the user to choose from.</p>
     
-    <a href="chooser.html?src=https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/australia_5km/&dest=http://computeNode1.ecocloud.example.org/downloader&title=Australia%205km">Choose from Australia 5km</a>
-
     <!-- XML not supported yet
     <a href="chooser.html?src=https://swift.rc.nectar.org.au/v0/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/anuclim&dest=http://computeNode1.ecocloud.example.org/downloader&title=Example1">XML Example 1</a>
--->
+    -->
+
+    <p>
+      <a href="" title="Download files to Working Storage" onclick="auChooser({src:'https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/australia_5km/', title:'Australia 5km'});return false;">Choose from Australia 5km</a>
+    </p>
+
+    <form>
+      <input id="mybutton" type="button" value="Choose from Australia 5km"/>
+    </form>
+
+    <p id="result">
+    </p>
   </body>
 </html>
