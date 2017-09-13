@@ -1,7 +1,7 @@
 <html>
   <head>
-    <title>Golden Examples</title>
-    <script type="text/javascript" src="golden.js"></script>
+    <title>Lisbon Examples</title>
+    <script type="text/javascript" src="lisbon.js"></script>
 
     <script type="text/javascript">
 function myOnLoad() {
@@ -12,9 +12,9 @@ function myOnLoad() {
     auChooser({
       title:'Australia 5km',
       src:'https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/australia_5km/',
-      hideSubtitle: 1,
+      hideSubtitle: 0,
       success: function (items) {
-        var f = "<ul>";
+        var f = "<p>You have chosen:<ul>";
         for (var i = 0, len = items.length; i < len; i++) {
           f = f + "<li>";
           f = f + items[i];
@@ -37,11 +37,11 @@ function myOnLoad() {
   </head>
   
   <body onload="myOnLoad()">
-    <h1>Golden</h1>
+    <h1>Lisbon</h1>
 
     <h2>Chooser</h2>
 
-    <p>The <em>Golden Chooser</em> allows a user to select one or more
+    <p>The <em>Lisbon Chooser</em> allows a user to select one or more
       URLs to process. Given a URL to a HTML page as the source, it
       downloads it and parses it for links. Those links are presented
       to the user to choose from.</p>
@@ -50,9 +50,8 @@ function myOnLoad() {
     <a href="chooser.html?src=https://swift.rc.nectar.org.au/v0/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/anuclim&dest=http://computeNode1.ecocloud.example.org/downloader&title=Example1">XML Example 1</a>
     -->
 
-    <p>
-      <a href="" title="Download files to Working Storage" onclick="auChooser({src:'https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/australia_5km/', title:'Australia 5km'});return false;">Choose from Australia 5km</a>
-    </p>
+    <p>As JavaScript, it can be invoked from a
+      <a href="" title="Download files to Working Storage" onclick="auChooser({src:'https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/australia_5km/', title:'Australia 5km'});return false;">link</a>, or via a button:</p>
 
     <form>
       <input id="mybutton" type="button" value="Choose from Australia 5km"/>

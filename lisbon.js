@@ -28,7 +28,12 @@ table {\
  margin: 0 0 7ex;\
 }\
 tr:hover {\
- background: #9cf;\
+ background: #def;\
+ cursor: pointer;\
+}\
+tr.sel:hover {\
+ background: #26f;\
+ cursor: pointer;\
 }\
 td {\
  font-size: 15px;\
@@ -58,16 +63,18 @@ a {\
 #chooseBtn, #cancelBtn {\
  display: inline-block;\
  margin: 1ex 1em 1ex 0.5em;\
- border: 1px solid #bbb;\
+ border: 1px solid inherit;\
  border-radius: 3px;\
  padding: 1ex 1em;\
 }\
 \
 #cancelBtn {\
+ border: 1px solid #bbb;\
  color: #333;\
+ cursor: pointer;\
 }\
 #cancelBtn:hover {\
- background: #aaa;\
+ background: #ccc;\
  color: black;\
  border: 1px solid #000;\
 }\
@@ -78,12 +85,16 @@ a {\
 .btnDisabled, .btnDisabled:hover {\
  background: #ccc;\
  color: white;\
+ border: 1px solid #bbb;\
+ cursor: not-allowed;\
 }\
 .btnEnabled {\
- background: #9cf;\
+ background: #39f;\
+ border: 1px solid #26f;\
+ cursor: pointer;\
 }\
 .btnEnabled:hover {\
- background: #39f;\
+ background: #3af;\
  border: 1px solid #000;\
 }\
 ";
@@ -251,6 +262,14 @@ function handlePage(options, win, doc, contents) {
             var size = item[2]
             var date = item[3];
 
+	    if (! (url.startsWith("http://") || url.startsWith("https://"))) {
+		// HREF is relative: append to base URL
+		if (options.src.endsWith("/")) {
+		    url = options.src + url;
+		} else {
+		    url = options.src + "/" + url;
+		}
+	    }
             if (! text) {
                 text = "untitled";
             }
