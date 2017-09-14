@@ -1,9 +1,13 @@
-// Golden
+// Lisbon
 
-var cssContent = "\
+var Lisbon = {}; // namespace
+
+// CSS for Chooser
+
+Lisbon._chooserCss = "\
 body {\
  margin: 0; border: 0; padding: 0;\
- font-family: 'Open Sans', 'lucida grande', Arial, Verdana, sans-serif;\
+ font-family: 'Open Sans', 'Lucida Grande', Arial, Verdana, sans-serif;\
  font-size: 13px;\
 }\
 #title {\
@@ -31,7 +35,7 @@ tr:hover {\
  background: #def;\
  cursor: pointer;\
 }\
-tr.sel:hover {\
+tr.row-selected:hover {\
  background: #26f;\
  cursor: pointer;\
 }\
@@ -44,13 +48,13 @@ a {\
  color: inherit;\
 }\
 \
-.notsel {\
+.row-deselected {\
 }\
-.sel {\
+.row-selected {\
  background: #39f;\
  color: #fff;\
 }\
-#btns {\
+#nav-footer {\
  position: fixed;\
  bottom: 0;\
  width: 100%;\
@@ -101,36 +105,39 @@ a {\
 
 //----------------------------------------------------------------
 // HTML utility function (from section 15.8.1 of "JavaScript: The
-// Definitive Guide", 5th edition.
+// Definitive Guide", 5th edition)
 
-function make(doc, tagname, attributes, children) {
+function make(doc, tagName, attributes, children) {
     // If we were invoked with two arguments, the attributes argument is
     // an array or string; it should really be the children arguments.
-    if (arguments.length == 2 &&
-        (attributes instanceof Array || typeof attributes == "string")) {
+    if (arguments.length === 2 &&
+        (attributes instanceof Array || typeof attributes === "string")) {
         children = attributes;
         attributes = null;
     }
 
     // Create the element
-    var e = doc.createElement(tagname);
+    var e = doc.createElement(tagName);
 
     // Set attributes
     if (attributes) {
-        for (var name in attributes)
-            e.setAttribute(name, attributes[name]);
+        for (var name in attributes) {
+            if (attributes.hasOwnProperty(name)) {
+                e.setAttribute(name, attributes[name]);
+            }
+        }
     }
     // Add children, if any were specified.
-    if (children != null) {
+    if (children !== null) {
         if (children instanceof Array) {  // If it really is an array
             for (var i = 0; i < children.length; i++) { // Loop through kids
                 var child = children[i];
-                if (typeof child == "string")          // Handle text nodes
+                if (typeof child === "string")          // Handle text nodes
                     child = doc.createTextNode(child);
                 e.appendChild(child);  // Assume anything else is a Node
             }
         }
-        else if (typeof children == "string") // Handle single text child
+        else if (typeof children === "string") // Handle single text child
             e.appendChild(doc.createTextNode(children));
         else e.appendChild(children);
         // Finally, return the element.
@@ -139,36 +146,191 @@ function make(doc, tagname, attributes, children) {
 }
 
 function maker(doc, tag) {
-    return function (attrs, kids) {
-        if (arguments.length == 1)
-            return make(doc, tag, attrs);
+    return function (attributes, kids) {
+        if (arguments.length === 1)
+            return make(doc, tag, attributes);
         else
-            return make(doc, tag, attrs, kids);
+            return make(doc, tag, attributes, kids);
     }
 }
 
+//================================================================
+// Class for representing a running instance of the Chooser.
+
+Lisbon._ChooserContext = function (options) {
+
+    this.options = options;
+
+    // These will be populated when run() method is invoked
+    this.window = null;
+    this.document = null;
+    this.items = [];
+};
+
+// Returns the number of items currently selected.
+
+Lisbon._ChooserContext.prototype.numSelected = function () {
+    var count = 0;
+    for (var i = 0, len = this.items.length; i < len; i++) {
+        if (this.items[i].selected) {
+            count++;
+        }
+    }
+    return count;
+};
+
+// Returns a list of URLs for the items that are currently selected.
+
+Lisbon._ChooserContext.prototype.selectedUrls = function () {
+    var results = [];
+    for (var i = 0, len = this.items.length; i < len; i++) {
+        if (this.items[i].selected) {
+            results.push(this.items[i].url);
+        }
+    }
+    return results;
+};
+
+Lisbon._ChooserContext.prototype._doSuccess = function () {
+    this.window.close();
+    if (this.options.success) {
+        this.options.success(this.selectedUrls());
+    }
+
+};
+
+Lisbon._ChooserContext.prototype._doCancel = function () {
+    this.window.close();
+    if (this.options.cancel) {
+        this.options.cancel(); // invoke callback
+    }
+};
+
 //----------------------------------------------------------------
-// Parse URL query parameters
+// Parse an XML DOM for a value to use as the subtitle.
 
-var urlParams;
+Lisbon._ChooserContext.prototype._parseXMLTitle = function (xmlDom) {
+    var name;
 
-(window.onpopstate = function () {
-    var match,
-        pl = /\+/g,  // Regex for replacing addition symbol with a space
-        search = /([^&=]+)=?([^&]*)/g,
-        decode = function (s) {
-            return decodeURIComponent(s.replace(pl, " "));
-        },
-        query = window.location.search.substring(1);
+    var c = xmlDom.children;
+    for (var i = 0, len = c.length; i < len; i++) {
+        var child = c[i];
+        if (child.nodeName === 'container') {
+            var candidateName = child.getAttribute("name");
+            if (candidateName !== null && candidateName !== '') {
+                name = candidateName;
+            }
+        }
+    }
 
-    urlParams = {};
-    while (match = search.exec(query))
-        urlParams[decode(match[1])] = decode(match[2]);
-})();
+    return name;
+};
 
-//----------------------------------------------------------------
+// Parse an XML DOM for items.
+// Populates the `item` member.
 
-function parseTitle(hiddenDiv) {
+Lisbon._ChooserContext.prototype._parseXMLItems = function (xmlDom) {
+    var baseUrl = this.options.src;
+
+    this.items.length = 0; // clear any members in the array
+
+    var timestampRegExp = new RegExp("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?$");
+
+    var c1 = xmlDom.children;
+    for (var i1 = 0, len1 = c1.length; i1 < len1; i1++) {
+        if (c1[i1].nodeName === 'container') {
+            var container = c1[i1];
+
+            // Look for <object> inside the <container>
+
+            var c2 = container.children;
+            for (var i2 = 0, len2 = c2.length; i2 < len2; i2++) {
+                if (c2[i2].nodeName === "object") {
+                    var obj = c2[i2];
+
+                    var name;
+                    var fileSize;
+                    var date;
+
+                    var c3 = obj.children;
+                    for (var i3 = 0, len3 = c3.length; i3 < len3; i3++) {
+                        var element = c3[i3];
+                        switch (element.nodeName) {
+                            case "name":
+                                name = element.textContent;
+                                if (name === '') {
+                                    name = null; // do not use if there is no sensible value
+                                }
+                                break;
+                            case "bytes":
+                                var fs = element.textContent;
+                                if (new RegExp("^[0-9]+$").test(fs)) {
+                                    // Number of bytes: format with human readable units
+                                    var num;
+                                    var units;
+                                    var bytes = 0 + fs;
+                                    if (bytes < 1024) {
+                                        num = bytes;
+                                        // units = null
+                                    } else if (bytes < 1024 * 1024) {
+                                        num = bytes / 1024;
+                                        units = "KiB";
+                                    } else if (bytes < 1024 * 1024 * 1024) {
+                                        num = bytes / 1024 / 1024;
+                                        units = "MiB";
+                                    } else if (bytes < 1024 * 1024 * 1024 * 1024) {
+                                        num = bytes / 1024 / 1024 / 1024;
+                                        units = "GiB";
+                                    } else {
+                                        num = bytes / 1024 / 1024 / 1024 / 1024;
+                                        units = "TiB";
+                                    }
+
+                                    if (units === null) {
+                                        fileSize = bytes + ' B'; // no decimal part
+                                    } else {
+                                        fileSize = parseFloat(Math.round(num * 10) / 10).toFixed(1) + ' ' + units;
+                                    }
+
+                                }
+                                break;
+                            case "last_modified":
+                                if (timestampRegExp.test(element.textContent)) {
+                                    // Only use whole seconds precision and replace date-time separator
+                                    date = element.textContent.substring(0, 19).replace('T', ' ');
+                                }
+                                break;
+                        }
+
+                    }
+
+                    if (name !== null) {
+                        var url;
+                        if (baseUrl.charAt(baseUrl.length - 1) === '/') {
+                            url = baseUrl + name;
+                        } else {
+                            url = baseUrl + "/" + name;
+                        }
+
+                        this.items.push({
+                            url: url,
+                            name: name,
+                            size: fileSize,
+                            date: date,
+                            selected: false
+                        });
+                    } else {
+                        // <object> doesn't have a <name>: ignore
+                    }
+                }
+            }
+        }
+    }
+};
+
+// Parse a HTML DOM for a <H1> tag to use as the subtitle.
+
+Lisbon._ChooserContext.prototype._parseHTMLTitle = function (hiddenDiv) {
 
     var h1_tags = hiddenDiv.getElementsByTagName('H1');
 
@@ -177,222 +339,215 @@ function parseTitle(hiddenDiv) {
     } else {
         return null;
     }
-}
+};
 
-function parseItems(hiddenDiv) {
-    var items = [];
+// Parse a HTML DOM for items.
+// Populates the `item` member.
+
+Lisbon._ChooserContext.prototype._parseHTMLItems = function (hiddenDiv) {
+    var baseUrl = this.options.src;
+
+    this.items.length = 0; // clear any members in the array
 
     var anchors = hiddenDiv.getElementsByTagName('a');
     for (var i = 0, len = anchors.length; i < len; i++) {
         var anchor = anchors[i];
-        var filesize = null;
-        var date = null;
 
-        var p = anchor.parentNode;
-        if (p.nodeName == 'TD') {
-            var pp = p.parentNode;
-            if (pp.nodeName == 'TR') {
-                var children = pp.childNodes;
-                for (var j = 0, len2 = children.length; j < len2; j++) {
-                    var n = children[j];
-                    if (n.nodeType == 1 && n.nodeName == 'TD') {
-                        if (n.className == "colsize") {
-                            filesize = n.innerText;
-                        } else if (n.className == "coldate") {
-                            date = n.innerText;
+        // URL is the link's HREF
+
+        var url = anchor.getAttribute("href");
+        if (url !== '') {
+            // Make sure URL is not relative
+
+            if (!new RegExp("^\w+\:\/\/").test(url)) {
+                // Does not start with "scheme://", so not an absolute URL: append to base URL
+                if (baseUrl.charAt(baseUrl.length - 1) === '/')
+                    url = baseUrl + url;
+            } else {
+                url = baseUrl + "/" + url;
+            }
+
+
+            // Text is the text of the link
+
+            var name = anchor.innerText;
+
+            // Size and date, if available
+
+            var fileSize = null;
+            var date = null;
+
+            var p = anchor.parentNode;
+            if (p.nodeName === 'TD') {
+                var pp = p.parentNode;
+                if (pp.nodeName === 'TR') {
+                    var children = pp.childNodes;
+                    for (var j = 0, len2 = children.length; j < len2; j++) {
+                        var n = children[j];
+                        if (n.nodeType === 1 && n.nodeName === 'TD') {
+                            if (n.className === "colsize") {
+                                fileSize = n.innerText;
+                            } else if (n.className === "coldate") {
+                                date = n.innerText;
+                            }
                         }
                     }
                 }
             }
+
+            this.items.push({
+                url: url,
+                name: name,
+                size: fileSize,
+                date: date,
+                selected: false
+            });
+        } else {
+            // Link without HREF: ignore
         }
-
-        items.push([
-            anchor.getAttribute("href"),
-            anchor.innerText,
-            filesize,
-            date
-        ]);
     }
-
-    return items;
-}
+};
 
 //----------------------------------------------------------------
 
-function handlePage(options, win, doc, contents) {
+Lisbon._chooserItemOnClick = function (event) {
+    // this = <tr> element that was clicked
+    // it has custom attributes of "chooseContext" and "chooserIndex"
 
-    // Create a hidden DIV to parse the HTML into a DOM
+    var context = this.chooserContext;
+    var itemIndex = this.chooserIndex;
 
-    var hiddenDiv = doc.createElement("div");
-    hiddenDiv.setAttribute("style", 'display: none');
-    hiddenDiv.innerHTML = contents;
+    var chooseBtn = context.document.getElementById("chooseBtn");
+    var item = context.items[itemIndex];
 
+    if (event.shiftKey) {
+        //console.log("shift key pressed"); // TODO
+    }
+
+    if (!item.selected) {
+        // Select the clicked item
+        item.selected = true;
+        this.className = "row-selected";
+    } else {
+        // Deselect the clicked item
+        item.selected = false;
+        this.className = "row-deselected";
+    }
+
+    var numSelected = context.numSelected();
+
+    if (numSelected === 0) {
+        // Disable "choose" button
+        chooseBtn.className = "btnDisabled";
+        chooseBtn.onclick = null;
+    } else {
+        // Enable "choose" button
+        chooseBtn.className = "btnEnabled";
+        chooseBtn.onclick = function () {
+            context._doSuccess();
+        }
+    }
+    return false;
+};
+
+//----------------
+// Action when source page is loaded.
+
+Lisbon._ChooserContext.prototype.handlePage = function (req) {
     // Parse information from document
 
-    var pageTitle = parseTitle(hiddenDiv);
-    var items = parseItems(hiddenDiv);
+    var pageTitle = "";
 
-    if ((! options.hideSubtitle) && pageTitle != "") {
-        doc.getElementById("subtitle").innerHTML = pageTitle;
+    if (this.options.isXML) {
+        pageTitle = this._parseXMLTitle(req.responseXML);
+        this._parseXMLItems(req.responseXML);
+    } else {
+        var hiddenDiv = this.document.createElement("div");
+        hiddenDiv.setAttribute("style", 'display: none');
+        hiddenDiv.innerHTML = req.response; // parse into DOM
+
+        pageTitle = this._parseHTMLTitle(hiddenDiv);
+        this._parseHTMLItems(hiddenDiv);
     }
-    doc.getElementById("message").innerHTML = "";
 
-    // Map to track selected items
-
-    var selected = new Map();
-
-    var chooseBtn = doc.getElementById("chooseBtn");
+    if (this.options.showSubtitle && pageTitle !== "") {
+        this.document.getElementById("subtitle").innerHTML = pageTitle;
+    }
+    this.document.getElementById("message").innerHTML = "";
 
     // Produce new links
 
-    var table = maker(doc, "table");
-    var tr = maker(doc, "tr");
-    var td = maker(doc, "td");
-    var a = maker(doc, "a");
+    var table = maker(this.document, "table");
+    var tr = maker(this.document, "tr");
+    var td = maker(this.document, "td");
+    var a = maker(this.document, "a");
 
-    if (0 < items.length) {
+    if (0 < this.items.length) {
         // Parser found some links: produce table
 
         var theTable = table(null, []);
 
-        for (var i = 0, len = items.length; i < len; i++) {
-            var item = items[i];
-            var url = item[0];
-            var text = item[1];
-            var size = item[2]
-            var date = item[3];
+        for (var i = 0, len = this.items.length; i < len; i++) {
+            var item = this.items[i];
 
-	    if (! (url.startsWith("http://") || url.startsWith("https://"))) {
-		// HREF is relative: append to base URL
-		if (options.src.endsWith("/")) {
-		    url = options.src + url;
-		} else {
-		    url = options.src + "/" + url;
-		}
-	    }
-            if (! text) {
-                text = "untitled";
-            }
-            if (! size) {
-                size = '';
-            }
-            if (! date) {
-                date = '';
+            var displayName = item.name;
+            if (!displayName) {
+                displayName = "untitled";
             }
 
             var row = tr(null, [
-                td(null, [a({href: url}, text)]),
-                td(null, [size]),
-                td(null, [date]),
+                td(null, [a({href: item.url}, displayName)]),
+                td(null, [item.size ? item.size : '']),
+                td(null, [item.date ? item.date : ''])
             ]);
-            row.url = url;
 
-            row.onclick = function(event) {
-                var url = this.url;
-                //console.log(url);
+            row.chooserContext = this;
+            row.chooserIndex = i;
 
-                if (! selected.has(url)) {
-                    selected.set(url, 1);
-                    this.className = "sel";
-                } else {
-                    selected.delete(url);
-                    this.setAttribute("class", "notSel");
-                }
-
-                if (selected.size == 0) {
-                    chooseBtn.className = "btnDisabled";
-                    chooseBtn.onclick = null;
-                } else {
-                    chooseBtn.className = "btnEnabled";
-                    chooseBtn.onclick = function() {
-                        win.close();
-                        if (options.success) {
-                            var results = [];
-                            for (var k of selected.keys()) {
-                                results.push(k);
-                            }
-                            options.success(results); // callback
-                        }
-                    };
-                }
-                return false;
-            };
+            row.onclick = Lisbon._chooserItemOnClick;
 
             theTable.appendChild(row);
         }
 
-        doc.getElementById("contents").appendChild(theTable);
+        this.document.getElementById("contents").appendChild(theTable);
 
     } else {
         // Parser failed to find any links
-        doc.getElementById("message").innerHTML = "No links found.";
+        this.document.getElementById("message").innerHTML = "No links found.";
     }
-}
+};
 
 //----------------
+// Action when source page loading fails.
 
-function handleError(options, xreq, doc) {
-    var message = xreq.statusText;
-    if (message == null || message == "") {
-        message = "HTTP status " + xreq.status;
+Lisbon._ChooserContext.prototype.handleError = function (req) {
+    var message = "Error: could not get source page: " + req.statusText;
+
+    if (req.status !== 0) {
+        message += " (HTTP status " + req.status + ")";
     }
-    doc.getElementById("message").innerHTML =
-        "Error: could not load links: " + message;
-}
+    this.document.getElementById("message").innerHTML = message;
+};
 
 //----------------------------------------------------------------
+// Create a new instance of a running Chooser.
 
-//function pageListener() {
-//    if (this.status != 200) {
-//      document.getElementById("contents").innerHTML = "Error: " + this.statusText;
-//      return;
-//    }
-//    document.getElementById("contents").innerHTML = this.response;
-//}
+Lisbon._ChooserContext.prototype.run = function () {
 
-function initiateLoad(options, win, doc) {
-    // Create an XMLHttpRequest object
-
-    var xreq;
-    if (window.XMLHttpRequest) { // for IE7+, Firefox, Chrome, Opera, Safari
-        xreq = new XMLHttpRequest();
-    } else { // for IE6, IE5
-        xreq = new ActiveXObject("Microsoft.XMLHTTP");
-    }
-
-    xreq.onreadystatechange = function () {
-        if (xreq.readyState == 4) {  // Request is finished
-            if (xreq.status == 200) {
-                handlePage(options, win, doc, xreq.response);
-                // Note: cannot use xreq.responseXML() because the
-                // MIME type is incorrectly set to "text/plain" on XML
-                // content from OpenStack Swift Object Store.
-            } else {
-                handleError(options, xreq, doc);
-            }
-        }
-    }
-
-    xreq.open("GET", options.src, true);
-    xreq.send(null);
-}
-
-//----------------------------------------------------------------
-
-function auChooser(options) {
-    var titleStr;
-    var src;
-    if (options) {
-        titleStr = options["title"];
-        src = options["src"];
-    }
+    // Create a new window
 
     var win = window.open("about:blank", "_blank",
         'width=640,height=530,status=yes,resizable=yes,scrollbars=yes', true);
 
     var doc = win.document;
 
-    // Create the initial contents
+    // Record values in the context for later use
+
+    this.window = win;
+    this.document = doc;
+    this.items.length = 0; // clear array (just in case)
+
+    // Initial document
 
     var style = maker(doc, "style");
     var title = maker(doc, "title");
@@ -402,14 +557,15 @@ function auChooser(options) {
     var p = maker(doc, "p");
     var a = maker(doc, "a");
 
+    var titleStr = this.options.title;
     if (!titleStr)
-        titleStr = "Chooser";
+        titleStr = "Chooser"; // default title
 
     var head = doc.documentElement.getElementsByTagName('head')[0];
     var body = doc.documentElement.getElementsByTagName('body')[0];
     //var body = doc.documentElement.lastChild;
 
-    head.appendChild(style({type: 'text/css'}, cssContent));
+    head.appendChild(style({type: 'text/css'}, Lisbon._chooserCss));
     head.appendChild(title(null, "Choose files to download"));
 
     var msg = p({id: "message"}, []);
@@ -418,33 +574,101 @@ function auChooser(options) {
         div(null, [
             div({id: "title"}, [
                 h1(null, titleStr),
-                h2({id: "subtitle"}, ''),
+                h2({id: "subtitle"}, '')
             ]),
             div({id: "contents"}, [
-                msg,
+                msg
             ]),
-            div({id: "btns"}, [
+            div({id: "nav-footer"}, [
                 a({id: "chooseBtn", class: "btnDisabled"}, "Choose"),
-                a({id: "cancelBtn"}, "Cancel"),
-            ]),
+                a({id: "cancelBtn"}, "Cancel")
+            ])
         ])
     );
 
-    doc.getElementById("cancelBtn").onclick = function() {
-        win.close();
-        if (options.cancel) {
-            options.cancel(); // invoke callback
+    var context = this;
+    doc.getElementById("cancelBtn").onclick = function () {
+        context._doCancel();
+    };
+
+    body.onkeypress = function (event) {
+        console.log("Key pressed: " + event.keyCode);
+        switch (event.keyCode) {
+            case 13: // Return/Enter
+                if (0 < context.numSelected()) {
+                    context._doSuccess();
+                }
+                break;
+            case 27: // Escape
+                context._doCancel();
+                break;
         }
-    }
+    };
 
     // Load the source
 
-    if (src) {
+    if (this.options.src) {
         msg.innerHTML = "Loading...";
-        initiateLoad(options, win, doc);
+
+        // Use XMLHttpRequest to download the "src"
+
+        var req;
+        if (window.XMLHttpRequest) { // for IE7+, Firefox, Chrome, Opera, Safari
+            req = new XMLHttpRequest();
+        } else { // for IE6, IE5
+            req = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+
+        req.onreadystatechange = function () {
+            if (req.readyState === 4) {  // Request is finished
+                if (req.status === 200) {
+                    context.handlePage(req);
+                } else {
+                    context.handleError(req);
+                }
+            }
+        };
+
+        req.open("GET", this.options.src, true);
+
+        if (this.options.isXML) {
+            req.setRequestHeader("Accept", "text/xml");
+        }
+
+        req.send(null);
     } else {
+        // No "src" to load
         msg.innerHTML = "Internal error: source not specified.";
     }
-}
+};
+
+//================================================================
+// Class to represent to options to create a instance of a running Chooser.
+
+Lisbon.Chooser = function (options) {
+    this.title = null;
+    this.src = null;
+    this.isXML = false;
+    this.showSubtitle = true;
+    this.success = null; // method to invoke when choose button is clicked
+    this.cancel = null; // method to invoke when dialog is cancelled
+
+    if (options) {
+        this.title = options["title"];
+        this.src = options["src"];
+        this.isXML = !!(options.isXML);
+        this.showSubtitle = (options["showSubtitle"] !== null) ? !!(options["showSubtitle"]) : true;
+        this.success = options.success;
+        this.cancel = options.cancel;
+    }
+};
+
+// Factory method to create a new running Chooser.
+
+Lisbon.Chooser.prototype.run = function () {
+    var ctx = new Lisbon._ChooserContext(this);
+    ctx.run();
+    return ctx;
+};
 
 //EOF

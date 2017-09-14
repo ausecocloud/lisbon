@@ -9,16 +9,17 @@ function myOnLoad() {
   var result = document.getElementById("result");
 
   x.onclick = function () {
-    auChooser({
+    new Lisbon.Chooser({
       title:'Australia 5km',
       src:'https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/australia_5km/',
       hideSubtitle: 0,
       success: function (items) {
+        //console.log("Chooser: success: chosen " + items.length + " items");
         var f = "<p>You have chosen:<ul>";
         for (var i = 0, len = items.length; i < len; i++) {
           f = f + "<li>";
           f = f + items[i];
-          console.log(items[i]);
+          //console.log("Chosen: " + items[i]);
           f = f + "</li>";
         }
         f = f + "</ul>";
@@ -27,10 +28,11 @@ function myOnLoad() {
       cancel: function () {
         var result = document.getElementById("result");
         result.innerHTML = "";
-        // console.log("Cancelled");
+        //console.log("Chooser: cancel");
         // alert("Cancelled");
       }
-    });
+    }).run();
+    return false;
   }
 }
     </script>
@@ -41,7 +43,7 @@ function myOnLoad() {
 
     <h2>Chooser</h2>
 
-    <p>The <em>Lisbon Chooser</em> allows a user to select one or more
+    <p>The <em>Chooser</em> allows a user to select one or more
       URLs to process. Given a URL to a HTML page as the source, it
       downloads it and parses it for links. Those links are presented
       to the user to choose from.</p>
@@ -51,13 +53,29 @@ function myOnLoad() {
     -->
 
     <p>As JavaScript, it can be invoked from a
-      <a href="" title="Download files to Working Storage" onclick="auChooser({src:'https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/australia_5km/', title:'Australia 5km'});return false;">link</a>, or via a button:</p>
+      <a href="" title="Download files to Working Storage" onclick="new Lisbon.Chooser({src:'https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/australia_5km/', title:'Australia 5km'}).run();return false;">link</a>, or via a button:</p>
 
     <form>
       <input id="mybutton" type="button" value="Choose from Australia 5km"/>
     </form>
 
-    <p id="result">
+    <p id="result" style="background: lightgreen;">
     </p>
+
+
+    <h3>Errors</h3>
+
+    <ul>
+      <li><a href="" onclick="new Lisbon.Chooser().run(); return false;">Invoked with no options</a></li>
+
+      <li><a href="" onclick="new Lisbon.Chooser({title: 'A title was supplied'}).run(); return false;">Invoked with options that don't contain a source</a></li>
+
+      <li><a href="" onclick="new Lisbon.Chooser({src:'http://www.qriscloud.org.au/no-such-page.html'}).run(); return false;">Invoked with non-existent source page</a></li>
+
+      <li><a href="" onclick="new Lisbon.Chooser({src:'http://www.hoylen.com/photos/index.html'}).run(); return false;">Links from an arbitrary HTML page</a></li>
+
+      <li><a href="" onclick="new Lisbon.Chooser({title: 'ANU Climate',src:'https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/anuclim', isXML:true}).run(); return false;">Swift Object Store XML listing</a></li>
+    </ul>
+
   </body>
 </html>
