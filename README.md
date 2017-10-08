@@ -22,6 +22,10 @@ Cross-Origin Resource Sharing (CORS).
 ```
 var options = {
   src: "https://www.example.com/data-listing.html",
+  headers: {
+    'x-auth-token': 'foobar',
+    'user-agent': 'Lisbon Chooser'
+  },
   isXML: false,
   title: "My chooser",
   showSubtitle: true,
@@ -49,11 +53,23 @@ will not function correctly. For example,
 The options can contain:
 
 - `src` - URL to download for links (mandatory)
+- `headers` - dictionary of additional HTTP request headers (default: null)
 - `isXML` - source URL is to an OpenStack Swift XML listing (default: false)
 - `title` - title to display
 - `showSubtitle` - show the source page's H1 as the subtitle (default: true)
 - `success` - function to invoke if user selects one or more items.
 - `cancel` - function to invoke if user cancels the chooser.
+
+Additional HTTP request headers can be provided in the `headers`
+member.  It must be a dictionary where the keys are the header names
+and the values are either single strings or an array of strings
+(producing a single header or multiple headers with the same name,
+respectively).
+
+Setting `isXML` to true is equivalent to adding a HTTP request
+"Accept" header with the value of "text/xml". If the `headers` already
+contains an "Accept" header, `isXML` should not be used. If set, it is
+ignored (i.e. the explicitly provided "Accept" header is used).
 
 ## Known issues
 

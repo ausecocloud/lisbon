@@ -12,6 +12,9 @@ function myOnLoad() {
     new Lisbon.Chooser({
       title:'Australia 5km',
       src:'https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/australia_5km/',
+      headers: {
+        'x-auth-token': '0123456789abcdef'
+      },
       hideSubtitle: 0,
       success: function (items) {
         //console.log("Chooser: success: chosen " + items.length + " items");
@@ -52,6 +55,8 @@ function myOnLoad() {
     <a href="chooser.html?src=https://swift.rc.nectar.org.au/v0/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/anuclim&dest=http://computeNode1.ecocloud.example.org/downloader&title=Example1">XML Example 1</a>
     -->
 
+    <h3>HTML listing</h3>
+
     <p>As JavaScript, it can be invoked from a
       <a href="" title="Download files to Working Storage" onclick="new Lisbon.Chooser({src:'https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/australia_5km/', title:'Australia 5km'}).run();return false;">link</a>, or via a button:</p>
 
@@ -62,19 +67,21 @@ function myOnLoad() {
     <p id="result" style="background: lightgreen;">
     </p>
 
+    <h3>XML listing</h3>
 
-    <h3>Errors</h3>
+    <form>
+      <input type="button" value="Choose from ANU climate data"
+       onclick="new Lisbon.Chooser({title: 'ANU Climate',src:'https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/anuclim', isXML:true}).run(); return false;"/>
+    </form>
+
+    <h3>Example errors</h3>
 
     <ul>
-      <li><a href="" onclick="new Lisbon.Chooser().run(); return false;">Invoked with no options</a></li>
+      <li><a href="" onclick="new Lisbon.Chooser().run(); return false;">Invoked with no options: incorrect usage error</a></li>
 
-      <li><a href="" onclick="new Lisbon.Chooser({title: 'A title was supplied'}).run(); return false;">Invoked with options that don't contain a source</a></li>
+      <li><a href="" onclick="new Lisbon.Chooser({title: 'A title was supplied'}).run(); return false;">Invoked with options that don't contain a source: incorrect usage error</a></li>
 
       <li><a href="" onclick="new Lisbon.Chooser({src:'http://www.qriscloud.org.au/no-such-page.html'}).run(); return false;">Invoked with non-existent source page</a></li>
-
-      <li><a href="" onclick="new Lisbon.Chooser({src:'http://www.hoylen.com/photos/index.html'}).run(); return false;">Links from an arbitrary HTML page</a></li>
-
-      <li><a href="" onclick="new Lisbon.Chooser({title: 'ANU Climate',src:'https://swift.rc.nectar.org.au/v1/AUTH_0bc40c2c2ff94a0b9404e6f960ae5677/anuclim', isXML:true}).run(); return false;">Swift Object Store XML listing</a></li>
     </ul>
 
   </body>

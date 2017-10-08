@@ -2,6 +2,8 @@
 
 var Lisbon = {}; // namespace
 
+Lisbon.version = "1.1.0";
+
 // CSS for Chooser
 
 Lisbon._chooserCss = "\
@@ -458,10 +460,20 @@ Lisbon._ChooserContext.prototype.handlePage = function (req) {
 
     var pageTitle = "";
 
-    if (this.options.isXML) {
+    var contentType = req.getResponseHeader('content-type')
+
+    if (req.responseXML !== null) {
+        // Response parsed by XMLHttpRequest as XML: use it
         pageTitle = this._parseXMLTitle(req.responseXML);
         this._parseXMLItems(req.responseXML);
+
+    } else if (contentType.startsWith('text/plain')) {
+        // Response is plain text: cannot parse for links: abort
+        this.document.getElementById("message").innerHTML = "Error: source with 'text/plain' content-type is not supported.";
+        return;
+
     } else {
+        // Response not parsed as XML: parse it as HTML
         var hiddenDiv = this.document.createElement("div");
         hiddenDiv.setAttribute("style", 'display: none');
         hiddenDiv.innerHTML = req.response; // parse into DOM
@@ -521,11 +533,20 @@ Lisbon._ChooserContext.prototype.handlePage = function (req) {
 // Action when source page loading fails.
 
 Lisbon._ChooserContext.prototype.handleError = function (req) {
-    var message = "Error: could not get source page: " + req.statusText;
+    var message = "Error: could not get source page";
+
+    if (req.statusText !== '') {
+      message += ": " + req.statusText;
+    }
 
     if (req.status !== 0) {
-        message += " (HTTP status " + req.status + ")";
+      message += " (HTTP status " + req.status + ")";
     }
+
+    if (req.statusText === '' && req.status === 0) {
+      message += ": possibly cross-site request is not permitted.";
+    }
+
     this.document.getElementById("message").innerHTML = message;
 };
 
@@ -629,16 +650,46 @@ Lisbon._ChooserContext.prototype.run = function () {
             }
         };
 
+        // Construct request
+
         req.open("GET", this.options.src, true);
 
-        if (this.options.isXML) {
-            req.setRequestHeader("Accept", "text/xml");
+        var customAcceptHeader = false;
+
+        if (this.options.headers !== null) {
+          for (var key in this.options.headers) {
+            if (this.options.headers.hasOwnProperty(key)) {
+              var value = this.options.headers[key];
+              if (value instanceof Array) {
+                // Repeated header
+                for (var i = 0, len = value.length; i < len; i++) {
+                  req.setRequestHeader(key, value[i].toString());
+                }
+              } else {
+                // Single header
+                req.setRequestHeader(key, value.toString());
+              }
+              if (key.toLowerCase() === 'accept') {
+                customAcceptHeader = true;
+              }
+            }
+          }
         }
+
+        if (this.options.isXML) {
+            if (! customAcceptHeader) {
+              req.setRequestHeader("Accept", "text/xml");
+            } else {
+	      console.log("lisbon: warning: custom request headers has an 'Accept' header: isXML is ignored");
+	    }
+        }
+
+        // Send request
 
         req.send(null);
     } else {
         // No "src" to load
-        msg.innerHTML = "Internal error: source not specified.";
+        msg.innerHTML = "Internal error: source URL 'src' not specified.";
     }
 };
 
@@ -648,6 +699,7 @@ Lisbon._ChooserContext.prototype.run = function () {
 Lisbon.Chooser = function (options) {
     this.title = null;
     this.src = null;
+    this.headers = null;
     this.isXML = false;
     this.showSubtitle = true;
     this.success = null; // method to invoke when choose button is clicked
@@ -656,6 +708,7 @@ Lisbon.Chooser = function (options) {
     if (options) {
         this.title = options["title"];
         this.src = options["src"];
+        this.headers = options["headers"];
         this.isXML = !!(options.isXML);
         this.showSubtitle = (options["showSubtitle"] !== null) ? !!(options["showSubtitle"]) : true;
         this.success = options.success;
