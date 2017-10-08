@@ -23,8 +23,7 @@ Cross-Origin Resource Sharing (CORS).
 var options = {
   src: "https://www.example.com/data-listing.html",
   headers: {
-    'x-auth-token': 'foobar',
-    'user-agent': 'Lisbon Chooser'
+    'x-auth-token': 'foobar'
   },
   isXML: false,
   title: "My chooser",
@@ -47,7 +46,7 @@ will not function correctly. For example,
 
 ```
 <input type="button"
- onclick="new LisbonChooser({src: 'https://swift.example.org/v1/AUTH_1234567890/containerName', isXML: true}).run(); return false;" />
+ onclick="new LisbonChooser({src: 'https://swift.example.org/v1/x/y', isXML: true}).run(); return false;" />
 ```
 
 The options can contain:
