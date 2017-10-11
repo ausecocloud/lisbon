@@ -559,7 +559,7 @@ Lisbon._ChooserContext.prototype.run = function () {
 
     // Create a new window
 
-    var win = window.open("about:blank", "_blank",
+    var win = window.open("", "_blank",
         'width=640,height=530,status=yes,resizable=yes,scrollbars=yes', true);
 
     var doc = win.document;
