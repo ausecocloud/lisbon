@@ -28,8 +28,15 @@ var options = {
   isXML: false,
   title: "My chooser",
   showSubtitle: true,
-  success: function (urls) {
-    // urls is an array of one or more strings (the URLs chosen)
+  success: function (items) {
+    // items is an array of one or more 'items' representing data about swift objects chosen.
+    // An item hase the following fields:
+    //    url: url to download object
+    //    name: object name (includes full path as it is part of the name)
+    //    bytes: object size in bytes (may be null)
+    //    size: human readable object size
+    //    date: last modified date
+    //    selected: boolean whether this item has been selected by the user (alway true)
   },
   cancel: function () {
     // chooser cancelled
