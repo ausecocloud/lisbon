@@ -614,6 +614,10 @@ Lisbon._ChooserContext.prototype.run = function () {
         context._doCancel();
     };
 
+    win.onunload = function() {
+        context._doCancel();
+    };
+
     body.onkeypress = function (event) {
         console.log("Key pressed: " + event.keyCode);
         switch (event.keyCode) {
