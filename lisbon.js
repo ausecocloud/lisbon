@@ -251,6 +251,7 @@ Lisbon._ChooserContext.prototype._parseXMLItems = function (xmlDom) {
                     var obj = c2[i2];
 
                     var name;
+                    var bytes;
                     var fileSize;
                     var date;
 
@@ -270,7 +271,7 @@ Lisbon._ChooserContext.prototype._parseXMLItems = function (xmlDom) {
                                     // Number of bytes: format with human readable units
                                     var num;
                                     var units;
-                                    var bytes = 0 + fs;
+                                    bytes = 0 + fs;
                                     if (bytes < 1024) {
                                         num = bytes;
                                         // units = null
@@ -317,6 +318,7 @@ Lisbon._ChooserContext.prototype._parseXMLItems = function (xmlDom) {
                         this.items.push({
                             url: url,
                             name: name,
+                            bytes: bytes,
                             size: fileSize,
                             date: date,
                             selected: false
