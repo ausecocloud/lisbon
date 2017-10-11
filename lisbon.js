@@ -187,7 +187,7 @@ Lisbon._ChooserContext.prototype.selectedUrls = function () {
     var results = [];
     for (var i = 0, len = this.items.length; i < len; i++) {
         if (this.items[i].selected) {
-            results.push(this.items[i].url);
+            results.push(this.items[i]);
         }
     }
     return results;
