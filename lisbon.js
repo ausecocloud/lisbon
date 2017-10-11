@@ -402,6 +402,7 @@ Lisbon._ChooserContext.prototype._parseHTMLItems = function (hiddenDiv) {
             this.items.push({
                 url: url,
                 name: name,
+		bytes: null,
                 size: fileSize,
                 date: date,
                 selected: false
