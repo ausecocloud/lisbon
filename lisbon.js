@@ -181,7 +181,7 @@ Lisbon._ChooserContext.prototype.numSelected = function () {
     return count;
 };
 
-// Returns a list of URLs for the items that are currently selected.
+// Returns a list of items that are currently selected.
 
 Lisbon._ChooserContext.prototype.selectedUrls = function () {
     var results = [];
